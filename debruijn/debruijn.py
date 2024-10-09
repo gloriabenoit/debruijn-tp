@@ -111,8 +111,6 @@ def read_fastq(fastq_file: Path) -> Iterator[str]:
             if ligne.startswith("@"):
                 yield next(fastq).strip()
 
-# for sequence in read_fastq(Path("../data/eva71_two_reads.fq")):
-    # print(sequence)
 
 def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
     """Cut read into kmers of size kmer_size.
@@ -123,9 +121,6 @@ def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
     for i in range(len(read) - kmer_size + 1):
         yield read[i:i + kmer_size]
 
-# for sequence in read_fastq(Path("../data/eva71_two_reads.fq")):
-    # for kmer in cut_kmer(sequence, 5):
-        # print(kmer)
 
 def build_kmer_dict(fastq_file: Path, kmer_size: int) -> Dict[str, int]:
     """Build a dictionnary object of all kmer occurrences in the fastq file
@@ -142,9 +137,6 @@ def build_kmer_dict(fastq_file: Path, kmer_size: int) -> Dict[str, int]:
                 kmer_occ[kmer] +=1
     return kmer_occ
 
-# "préfixe = la séquence [n-1] suffixe[1:]"
-
-# print(build_kmer_dict(Path("../data/eva71_two_reads.fq"), 5))
 
 def build_graph(kmer_dict: Dict[str, int]) -> DiGraph:
     """Build the debruijn graph
@@ -310,8 +302,9 @@ def solve_entry_tips(graph: DiGraph, starting_nodes: List[str]) -> DiGraph:
                         weight_avg_list.append(path_average_weight(graph, path))
 
             if len(path_list) > 1:
-                graph = select_best_path(graph, path_list, path_length, weight_avg_list, True, False)
-                return solve_entry_tips(graph, get_starting_nodes(graph)) 
+                graph = select_best_path(graph, path_list, path_length,
+                                         weight_avg_list, True, False)
+                return solve_entry_tips(graph, get_starting_nodes(graph))
 
     return graph
 
@@ -340,8 +333,9 @@ def solve_out_tips(graph: DiGraph, ending_nodes: List[str]) -> DiGraph:
                         weight_avg_list.append(path_average_weight(graph, path))
 
             if len(path_list) > 1:
-                graph = select_best_path(graph, path_list, path_length, weight_avg_list, False, True)
-                return solve_entry_tips(graph, get_sink_nodes(graph)) 
+                graph = select_best_path(graph, path_list, path_length,
+                                         weight_avg_list, False, True)
+                return solve_entry_tips(graph, get_sink_nodes(graph))
 
     return graph
 
@@ -457,7 +451,7 @@ def main() -> None:  # pragma: no cover
 
     # Résolution des bulles
     graph = simplify_bubbles(graph)
-    
+
     # Résolution des pointes
     graph = solve_entry_tips(graph, get_starting_nodes(graph))
     graph = solve_out_tips(graph, get_sink_nodes(graph))
@@ -470,7 +464,6 @@ def main() -> None:  # pragma: no cover
 
     # Ecriture des contigs
     contigs = get_contigs(graph, starting_nodes, sink_nodes)
-    print(contigs)
 
     # Sauvegarde des contigs dans fichier
     save_contigs(contigs, Path("contigs_obtained.txt"))
@@ -482,6 +475,10 @@ def main() -> None:  # pragma: no cover
     # if args.graphimg_file:
     #     draw_graph(graph, args.graphimg_file)
 
+
+    # Avec le BLAST, on retrouve bien 100% de match,
+    # il nous manque juste le début de la séquence, probablement
+    # à cause de notre technique pour enlever les tips.
 
 if __name__ == "__main__":  # pragma: no cover
     main()
