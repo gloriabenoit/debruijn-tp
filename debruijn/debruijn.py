@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+import itertools
 import networkx as nx
 from networkx import (
     DiGraph,
@@ -214,20 +215,18 @@ def select_best_path(
 
     # Test de la longueur
     else:
-        std = statistics.stdev(path_length_list)
+        std = statistics.stdev(path_length)
         if std > 0:
-            best_index = path_length_list.index(max(path_length_list))
+            best_index = path_length.index(max(path_length))
 
         # Choix aléatoire
         else:
             best_index = randint(0, len(path_list) - 1)
 
     # Suppression des mauvais chemins
-    for i in range(len(path_list)):
-        if i == best_index:
-            continue
-        remove_paths(graph, path_list[i], delete_entry_node, delete_sink_node)
-        
+    path_list.pop(best_index)
+    graph = remove_paths(graph, path_list, delete_entry_node, delete_sink_node)
+    return graph
 
 def path_average_weight(graph: DiGraph, path: List[str]) -> float:
     """Compute the weight of a path
@@ -249,7 +248,19 @@ def solve_bubble(graph: DiGraph, ancestor_node: str, descendant_node: str) -> Di
     :param descendant_node: (str) A downstream node in the graph
     :return: (nx.DiGraph) A directed graph object
     """
-    pass
+    if nx.has_path(graph, ancestor_node, descendant_node):
+        simple_paths = list(nx.all_simple_paths(graph, ancestor_node, descendant_node))
+
+    path_length = []
+    weight_avg_list = []
+
+    for path in simple_paths:
+        path_length.append(len(path))
+        weight_avg_list.append(path_average_weight(graph, path))
+
+    graph = select_best_path(graph, simple_paths, path_length, weight_avg_list, False, False)
+
+    return graph
 
 
 def simplify_bubbles(graph: DiGraph) -> DiGraph:
@@ -258,7 +269,22 @@ def simplify_bubbles(graph: DiGraph) -> DiGraph:
     :param graph: (nx.DiGraph) A directed graph object
     :return: (nx.DiGraph) A directed graph object
     """
-    pass
+    bubble = False
+    for node in graph.nodes:
+        pred = list(graph.predecessors(node))
+        if len(pred) > 1:
+            for i, j in itertools.combinations(pred, 2):
+                ancestor = nx.lowest_common_ancestor(graph, i, j)
+                if ancestor != None:
+                    bubble = True
+                    break
+            if bubble:
+                keep_node = node
+                break
+    if bubble:
+        graph = simplify_bubbles(solve_bubble(graph, ancestor, keep_node))
+
+    return graph
 
 
 def solve_entry_tips(graph: DiGraph, starting_nodes: List[str]) -> DiGraph:
