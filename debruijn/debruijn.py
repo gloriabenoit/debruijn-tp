@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+import networkx as nx
 from networkx import (
     DiGraph,
     all_simple_paths,
@@ -102,8 +103,15 @@ def read_fastq(fastq_file: Path) -> Iterator[str]:
     :param fastq_file: (Path) Path to the fastq file.
     :return: A generator object that iterate the read sequences.
     """
-    pass
+    with open(fastq_file, 'r') as fastq:
+        flag = -1
+        sequence = ""
+        for ligne in fastq:
+            if ligne.startswith("@"):
+                yield next(fastq).strip()
 
+# for sequence in read_fastq(Path("../data/eva71_two_reads.fq")):
+    # print(sequence)
 
 def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
     """Cut read into kmers of size kmer_size.
@@ -111,8 +119,12 @@ def cut_kmer(read: str, kmer_size: int) -> Iterator[str]:
     :param read: (str) Sequence of a read.
     :return: A generator object that provides the kmers (str) of size kmer_size.
     """
-    pass
+    for i in range(len(read) - kmer_size + 1):
+        yield read[i:i + kmer_size]
 
+# for sequence in read_fastq(Path("../data/eva71_two_reads.fq")):
+    # for kmer in cut_kmer(sequence, 5):
+        # print(kmer)
 
 def build_kmer_dict(fastq_file: Path, kmer_size: int) -> Dict[str, int]:
     """Build a dictionnary object of all kmer occurrences in the fastq file
@@ -120,8 +132,18 @@ def build_kmer_dict(fastq_file: Path, kmer_size: int) -> Dict[str, int]:
     :param fastq_file: (str) Path to the fastq file.
     :return: A dictionnary object that identify all kmer occurrences.
     """
-    pass
+    kmer_occ = {}
+    for sequence in read_fastq(Path(fastq_file)):
+        for kmer in cut_kmer(sequence, kmer_size):
+            if kmer not in kmer_occ.keys():
+                kmer_occ[kmer] = 1
+            else:
+                kmer_occ[kmer] +=1
+    return kmer_occ
 
+# "préfixe = la séquence [n-1] suffixe[1:]"
+
+# print(build_kmer_dict(Path("../data/eva71_two_reads.fq"), 5))
 
 def build_graph(kmer_dict: Dict[str, int]) -> DiGraph:
     """Build the debruijn graph
@@ -129,7 +151,14 @@ def build_graph(kmer_dict: Dict[str, int]) -> DiGraph:
     :param kmer_dict: A dictionnary object that identify all kmer occurrences.
     :return: A directed graph (nx) of all kmer substring and weight (occurrence).
     """
-    pass
+    graph = nx.DiGraph()
+    for kmer, occurrence in kmer_dict.items():
+        prefix = kmer[:-1]
+        suffix = kmer[1:]
+
+        graph.add_edge(prefix, suffix, weight=occurrence)
+
+    return graph
 
 
 def remove_paths(
@@ -296,6 +325,20 @@ def main() -> None:  # pragma: no cover
     """
     # Get arguments
     args = get_arguments()
+
+    # Lecture du fichier
+    fastq_file = args.fastq_file
+    kmer_size = args.kmer_size
+    
+    # Construction du dictionnaire
+    kmer_dict = build_kmer_dict(fastq_file, kmer_size)
+    
+    # Construction du graphe
+    graph = build_graph(kmer_dict)
+    
+    for u, v, d in list(graph.edges(data=True))[:10]:
+        print(f"{u} -> {v} (weight: {d['weight']})")
+
 
     # Fonctions de dessin du graphe
     # A decommenter si vous souhaitez visualiser un petit
