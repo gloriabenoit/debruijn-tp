@@ -261,7 +261,7 @@ def get_starting_nodes(graph: DiGraph) -> List[str]:
     starting_nodes = []
     for node in graph.nodes:
         pred = list(graph.predecessors(node))
-        if (len(pred) == 0):
+        if len(pred) == 0:
             starting_nodes.append(node)
     return starting_nodes
 
@@ -274,7 +274,7 @@ def get_sink_nodes(graph: DiGraph) -> List[str]:
     sink_nodes = []
     for node in graph.nodes:
         pred = list(graph.successors(node))
-        if (len(pred) == 0):
+        if len(pred) == 0:
             sink_nodes.append(node)
     return sink_nodes
 
@@ -294,7 +294,7 @@ def get_contigs(
         for end_node in ending_nodes:
             if nx.has_path(graph, start_node, end_node):
                 simple_paths = nx.all_simple_paths(graph, start_node, end_node)
-                
+
                 for path in simple_paths:
                     contig = path[0]
                     for node in path[1:]:
@@ -309,7 +309,12 @@ def save_contigs(contigs_list: List[str], output_file: Path) -> None:
     :param contig_list: (list) List of [contiguous sequence and their length]
     :param output_file: (Path) Path to the output file
     """
-    pass
+    with open(output_file, 'w') as output:
+        for i, contig in enumerate(contigs_list):
+            output.write(f">contig_{i} len={contig[1]}\n")
+
+            formatted = textwrap.fill(contig[0], width=80)
+            output.write(f"{formatted}\n")
 
 
 def draw_graph(graph: DiGraph, graphimg_file: Path) -> None:  # pragma: no cover
@@ -370,6 +375,9 @@ def main() -> None:  # pragma: no cover
     # Parcours du graph
     contigs = get_contigs(graph, starting_nodes, sink_nodes)
     print(contigs)
+
+    # Sauvegarde des contigs dans fichier
+    save_contigs(contigs, Path("test.txt"))
 
     # Fonctions de dessin du graphe
     # A decommenter si vous souhaitez visualiser un petit
