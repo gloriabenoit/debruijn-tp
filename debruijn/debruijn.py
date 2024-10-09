@@ -258,8 +258,12 @@ def get_starting_nodes(graph: DiGraph) -> List[str]:
     :param graph: (nx.DiGraph) A directed graph object
     :return: (list) A list of all nodes without predecessors
     """
-    pass
-
+    starting_nodes = []
+    for node in graph.nodes:
+        pred = list(graph.predecessors(node))
+        if (len(pred) == 0):
+            starting_nodes.append(node)
+    return starting_nodes
 
 def get_sink_nodes(graph: DiGraph) -> List[str]:
     """Get nodes without successors
@@ -267,7 +271,12 @@ def get_sink_nodes(graph: DiGraph) -> List[str]:
     :param graph: (nx.DiGraph) A directed graph object
     :return: (list) A list of all nodes without successors
     """
-    pass
+    sink_nodes = []
+    for node in graph.nodes:
+        pred = list(graph.successors(node))
+        if (len(pred) == 0):
+            sink_nodes.append(node)
+    return sink_nodes
 
 
 def get_contigs(
@@ -280,8 +289,19 @@ def get_contigs(
     :param ending_nodes: (list) A list of nodes without successors
     :return: (list) List of [contiguous sequence and their length]
     """
-    pass
+    contigs = []
+    for start_node in starting_nodes:
+        for end_node in ending_nodes:
+            if nx.has_path(graph, start_node, end_node):
+                simple_paths = nx.all_simple_paths(graph, start_node, end_node)
+                
+                for path in simple_paths:
+                    contig = path[0]
+                    for node in path[1:]:
+                        contig += node[-1]
 
+                    contigs.append((contig, len(contig)))
+    return contigs
 
 def save_contigs(contigs_list: List[str], output_file: Path) -> None:
     """Write all contigs in fasta format
@@ -329,16 +349,27 @@ def main() -> None:  # pragma: no cover
     # Lecture du fichier
     fastq_file = args.fastq_file
     kmer_size = args.kmer_size
-    
+
     # Construction du dictionnaire
     kmer_dict = build_kmer_dict(fastq_file, kmer_size)
-    
+
     # Construction du graphe
     graph = build_graph(kmer_dict)
-    
+
     for u, v, d in list(graph.edges(data=True))[:10]:
         print(f"{u} -> {v} (weight: {d['weight']})")
 
+    # Récupération des noeuds d'entrée
+    starting_nodes = get_starting_nodes(graph)
+    print(starting_nodes)
+
+    # Récupération des noeuds de sortie
+    sink_nodes = get_sink_nodes(graph)
+    print(sink_nodes)
+
+    # Parcours du graph
+    contigs = get_contigs(graph, starting_nodes, sink_nodes)
+    print(contigs)
 
     # Fonctions de dessin du graphe
     # A decommenter si vous souhaitez visualiser un petit
