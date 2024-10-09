@@ -294,7 +294,26 @@ def solve_entry_tips(graph: DiGraph, starting_nodes: List[str]) -> DiGraph:
     :param starting_nodes: (list) A list of starting nodes
     :return: (nx.DiGraph) A directed graph object
     """
-    pass
+    for node in graph.nodes:
+        pred = list(graph.predecessors(node))
+        if len(pred) > 1:
+            path_list = []
+            path_length = []
+            weight_avg_list = []
+            for entry in starting_nodes:
+                if nx.has_path(graph, entry, node):
+                    simple_paths = nx.all_simple_paths(graph, entry, node)
+
+                    for path in simple_paths:
+                        path_list.append(path)
+                        path_length.append(len(path))
+                        weight_avg_list.append(path_average_weight(graph, path))
+
+            if len(path_list) > 1:
+                graph = select_best_path(graph, path_list, path_length, weight_avg_list, True, False)
+                return solve_entry_tips(graph, get_starting_nodes(graph)) 
+
+    return graph
 
 
 def solve_out_tips(graph: DiGraph, ending_nodes: List[str]) -> DiGraph:
@@ -304,7 +323,27 @@ def solve_out_tips(graph: DiGraph, ending_nodes: List[str]) -> DiGraph:
     :param ending_nodes: (list) A list of ending nodes
     :return: (nx.DiGraph) A directed graph object
     """
-    pass
+    for node in graph.nodes:
+        pred = list(graph.successors(node))
+        if len(pred) > 1:
+            path_list = []
+            path_length = []
+            weight_avg_list = []
+            for end in ending_nodes:
+
+                if nx.has_path(graph, node, end):
+                    simple_paths = nx.all_simple_paths(graph, node, end)
+
+                    for path in simple_paths:
+                        path_list.append(path)
+                        path_length.append(len(path))
+                        weight_avg_list.append(path_average_weight(graph, path))
+
+            if len(path_list) > 1:
+                graph = select_best_path(graph, path_list, path_length, weight_avg_list, False, True)
+                return solve_entry_tips(graph, get_sink_nodes(graph)) 
+
+    return graph
 
 
 def get_starting_nodes(graph: DiGraph) -> List[str]:
@@ -406,7 +445,7 @@ def main() -> None:  # pragma: no cover
     # Get arguments
     args = get_arguments()
 
-    # Lecture du fichier
+    # Lecture des arguments
     fastq_file = args.fastq_file
     kmer_size = args.kmer_size
 
@@ -416,23 +455,25 @@ def main() -> None:  # pragma: no cover
     # Construction du graphe
     graph = build_graph(kmer_dict)
 
-    for u, v, d in list(graph.edges(data=True))[:10]:
-        print(f"{u} -> {v} (weight: {d['weight']})")
+    # Résolution des bulles
+    graph = simplify_bubbles(graph)
+    
+    # Résolution des pointes
+    graph = solve_entry_tips(graph, get_starting_nodes(graph))
+    graph = solve_out_tips(graph, get_sink_nodes(graph))
 
     # Récupération des noeuds d'entrée
     starting_nodes = get_starting_nodes(graph)
-    print(starting_nodes)
 
     # Récupération des noeuds de sortie
     sink_nodes = get_sink_nodes(graph)
-    print(sink_nodes)
 
-    # Parcours du graph
+    # Ecriture des contigs
     contigs = get_contigs(graph, starting_nodes, sink_nodes)
     print(contigs)
 
     # Sauvegarde des contigs dans fichier
-    save_contigs(contigs, Path("test.txt"))
+    save_contigs(contigs, Path("contigs_obtained.txt"))
 
     # Fonctions de dessin du graphe
     # A decommenter si vous souhaitez visualiser un petit
